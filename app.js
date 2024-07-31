@@ -60,6 +60,10 @@ app.post('/api/farm', async (req, res) => {
     }
 });
 
+app.get("/",(req,res)=>{
+    res.send("Server is Started")
+})
+
 // Endpoint for login
 app.post('/auth/login', async (req, res) => {
     const { name, pass } = req.body;
