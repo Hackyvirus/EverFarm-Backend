@@ -2,22 +2,17 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import mongoose from 'mongoose';
 import cors from 'cors';
-import multer from 'multer';
-import * as tf from '@tensorflow/tfjs-node';
+import 'dotenv/config'
 
 const app = express();
 const PORT = 4000;
-
-// Setup multer for file uploads
-const storage = multer.memoryStorage(); 
-const upload = multer({ storage: storage });
 
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/Eversity', { useNewUrlParser: true, useUnifiedTopology: true })
+
+mongoose.connect(process.env.DB_URL)
     .then(() => {
         console.log('Connected to Database');
     })
@@ -95,6 +90,6 @@ app.post('/auth/signup', async (req, res) => {
 });
 
 // Start the server
-app.listen(PORT, () => {
+app.listen(process.env.PORT || PORT, () => {
     console.log(`Server is started on port ${PORT}`);
 });
