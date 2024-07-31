@@ -94,41 +94,6 @@ app.post('/auth/signup', async (req, res) => {
     }
 });
 
-// Load the AI model once at startup
-let aiModel;
-const loadModel = async () => {
-    try {
-        aiModel = await tf.loadLayersModel('D:/Web Dev/Imp/everfarm-backend/AI/model.json');
-        console.log('AI Model loaded successfully');
-    } catch (error) {
-        console.error('Error loading AI model:', error);
-    }
-};
-loadModel();
-
-// Endpoint to handle image upload and prediction
-app.post('/api/predict', upload.single('image'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ success: false, message: 'No image uploaded' });
-    }
-
-    try {
-        const imgBuffer = req.file.buffer; // Get the image buffer
-        const imageTensor = tf.node.decodeImage(imgBuffer, 3); // Decode image
-        const resizedImage = tf.image.resizeBilinear(imageTensor, [224, 224]); // Resize to model input size
-        const inputTensor = resizedImage.expandDims(0).toFloat().div(tf.scalar(255)); // Prepare tensor
-
-        // Make prediction
-        const prediction = aiModel.predict(inputTensor);
-        const result = prediction.arraySync(); // Get the result from the tensor
-
-        res.status(200).json({ success: true, prediction: result });
-    } catch (error) {
-        console.error('Error during prediction:', error);
-        res.status(500).json({ success: false, message: 'Error making prediction', error });
-    }
-});
-
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server is started on port ${PORT}`);
