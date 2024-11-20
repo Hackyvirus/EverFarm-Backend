@@ -43,6 +43,39 @@ const UserSchema = new Schema({
         required: [true, "Phone Number is Required"],
         trim: true
     },
+    addressLine1: {
+        type: String,
+        lowercase: true,
+        trim: true,
+        required: true
+    },
+    addressLine2: {
+        type: String,
+        lowercase: true,
+        trim: true,
+    },
+    city: {
+        type: String,
+        lowercase: true,
+        trim: true,
+        required: true
+    },
+    district: {
+        type: String,
+        lowercase: true,
+        trim: true,
+        required: true
+    },
+    state: {
+        type: String,
+        lowercase: true,
+        trim: true,
+        required: true
+    },
+    pincode: {
+        type: String,
+        required: true
+    },
     password: {
         type: String,
         required: true

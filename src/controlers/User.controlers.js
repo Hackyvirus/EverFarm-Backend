@@ -22,7 +22,6 @@ const generateAccessTokenANDRefreshToken = async (id) => {
     }
 }
 
-
 const userSignUp = asyncHandler(async (req, res) => {
     const { Username, firstName, email, lastName, phoneNumber, password } = req.body
 
@@ -145,7 +144,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 })
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-    console.log('====',req.cookies)
+    console.log('====', req.cookies)
     const { incomingRefreshToken } = req.body
     console.log('incomeing', incomingRefreshToken)
     if (!incomingRefreshToken) {
@@ -166,7 +165,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         secure: true
     }
 
-    const { accessToken, refreshToken } =  await generateAccessTokenANDRefreshToken(decodedRefreshToken.id)
+    const { accessToken, refreshToken } = await generateAccessTokenANDRefreshToken(decodedRefreshToken.id)
 
     console.log('accessToken', accessToken)
     console.log('refreshToken', refreshToken)
@@ -174,4 +173,43 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     res.status(200).cookie('accessToken', accessToken, options).cookie('refreshToken', refreshToken, options).json(new ApiResponce(200, 'New Access Token Generated', user))
 })
 
-export { userSignUp, userLogin, userLogOut, changeCurrentPassword, refreshAccessToken }
+const updateAccount = asyncHandler(async (req, res) => {
+    try {
+        const { firstName, lastName, phoneNumber } = req.body
+        const user = await User.findByIdAndUpdate(req.user._id, {
+            $set: {
+                firstName: firstName,
+                lastName: lastName,
+                phoneNumber: phoneNumber
+            }, new: true
+        }).select("-password")
+
+        res.status(200).json(new ApiResponce(200, "Details Updated", user))
+
+    } catch (error) {
+        throw new ApiError(401, "Error whileing updating details");
+
+    }
+})
+
+const updateProfile = asyncHandler(async (req, res) => {
+    const localPath = req.file?.path
+    if (!localPath) {
+        throw new ApiError("Avatar is Required")
+    }
+
+    const profilePhotoLink = await uploadOnCloud(localPath)
+
+    if (!profilePhotoLink) {
+        throw new ApiError(500, "Error while uploding photo")
+    }
+
+    const user = User.findByIdAndUpdate(req.user._id, {
+        $set: {
+            profilePhoto: profilePhotoLink
+        }, new: true
+    }).select("-password")
+
+    res.json(new ApiResponce(200, "Profile Photo Updated", user))
+})
+export { userSignUp, updateProfile, updateAccount, userLogin, userLogOut, changeCurrentPassword, refreshAccessToken }
