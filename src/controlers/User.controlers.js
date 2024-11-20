@@ -1,5 +1,6 @@
 import asyncHandler from "../utils/asyncHandler.utils.js";
 import ApiError from "../utils/APIError.js"
+import jwt from 'jsonwebtoken'
 import ApiResponce from "../utils/ApiResponce.js"
 import { User } from "../models/users.models.js"
 import { uploadOnCloud } from "../utils/uploadFile.utils.js";
@@ -9,9 +10,9 @@ const generateAccessTokenANDRefreshToken = async (id) => {
         const user = await User.findById(id);
         // console.log("user", user)
         const accessToken = user.generateAccessToken()
-        // console.log("access TOken", accessToken)
+        console.log("access TOken1", accessToken)
         const refreshToken = user.generateRefreshToken()
-        // console.log("refreshToken", refreshToken)
+        console.log("refreshToken2", refreshToken)
         user.refreshToken = refreshToken
         await user.save({ validateBeforeSave: false })
         return { accessToken, refreshToken }
@@ -20,6 +21,7 @@ const generateAccessTokenANDRefreshToken = async (id) => {
         throw new ApiError(500, "Error while Generating Access TOken")
     }
 }
+
 
 const userSignUp = asyncHandler(async (req, res) => {
     const { Username, firstName, email, lastName, phoneNumber, password } = req.body
@@ -96,17 +98,80 @@ const userLogin = asyncHandler(async (req, res) => {
         }, "User logged in Successfully")
     )
 
-    // return res.status(200).cookie("accessToken", accessToken, options).cookie("refreshToken", refreshToken, options).json(new ApiResponce(200, {
-    //     user: loggedinUser, accessToken, refreshToken
-    // }, "User Logged In"))
 })
 
 const userLogOut = asyncHandler(async (req, res) => {
-    console.log("++", req.user)
-    try {
-        res.json(new ApiResponce(200, "we area log out", null))
-    } catch (error) {
 
+    try {
+        await User.findByIdAndUpdate(req.user._id, {
+            $set: {
+                refreshToken: undefined
+            },
+            new: true
+        })
+        const options = {
+            httpOnly: true,
+            secure: true
+        }
+        res.status(200).cookie('AccessToken', options).cookie('refreshToken', options).json(new ApiResponce(200, 'Log our SUccesfully', null))
+    } catch (error) {
+        throw new ApiError(401, 'Error While Loging our')
     }
+
 })
-export { userSignUp, userLogin, userLogOut }
+
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+    // get the old and new password 
+    const { oldPass, newPass } = req.body
+    console.log(" oldPass, newPass", oldPass, newPass)
+    console.log("req.user._id", req.user._id)
+    // find the user with that id 
+    // const user = await User.findById(req.user._id)
+    const user = await User.findById(req.user._id)
+    console.log("user", user)
+    // check the user password is same as old password
+    const isPasswordCurrect = await user.isPasswordCurrect(oldPass)
+    console.log("isPasswordCurrect", isPasswordCurrect)
+    if (!isPasswordCurrect) {
+        throw new ApiError(401, "Old Password is Incorrect")
+    }
+    // set the new password to the mongodb user
+    user.password = newPass
+    // save the password
+    user.save({ validateBeforeSave: false })
+    // send the respmoce
+    res.status(200).json(new ApiResponce(200, "Password change Succefully", user))
+
+})
+
+const refreshAccessToken = asyncHandler(async (req, res) => {
+    console.log('====',req.cookies)
+    const { incomingRefreshToken } = req.body
+    console.log('incomeing', incomingRefreshToken)
+    if (!incomingRefreshToken) {
+        throw new ApiError(401, 'Unauthorized access')
+    }
+
+    const decodedRefreshToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+
+    const user = await User.findById(decodedRefreshToken.id)
+    console.log('user', user)
+
+    if (!user) {
+        throw new ApiError('Unauthorized access');
+    }
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    const { accessToken, refreshToken } =  await generateAccessTokenANDRefreshToken(decodedRefreshToken.id)
+
+    console.log('accessToken', accessToken)
+    console.log('refreshToken', refreshToken)
+
+    res.status(200).cookie('accessToken', accessToken, options).cookie('refreshToken', refreshToken, options).json(new ApiResponce(200, 'New Access Token Generated', user))
+})
+
+export { userSignUp, userLogin, userLogOut, changeCurrentPassword, refreshAccessToken }

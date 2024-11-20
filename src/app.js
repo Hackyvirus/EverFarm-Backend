@@ -2,7 +2,7 @@ import express, { urlencoded, json, } from "express"
 import cors from "cors"
 import cookieParser from "cookie-parser"
 import userRouter from "./routes/users.routes.js"
-
+import adminRouter from "./routes/admin.routes.js"
 
 
 const app = express()
@@ -18,5 +18,6 @@ app.use(cookieParser())
 
 
 app.use("/users", userRouter)
+
 
 export default app
