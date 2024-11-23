@@ -3,6 +3,9 @@ import { Admin } from "../models/admin.models.js"
 import ApiError from "../utils/APIError.js";
 import { uploadOnCloud } from "../utils/uploadFile.utils.js";
 import ApiResponce from "../utils/ApiResponce.js";
+import { AiModel } from "../models/AiModel.models.js";
+import { Product } from "../models/product.models.js";
+import { Blog } from "../models/Blogs.models.js";
 const Home = asyncHandler(async (req, res) => {
     return res.send('<h1>Hello world</h1>')
 })
@@ -90,14 +93,69 @@ const adminLogin = asyncHandler(async (req, res) => {
 
 const addAIModel = asyncHandler(async (req, res) => {
     console.log(req.body)
+    const { modelID, trainingDataInformation, trainingDataType, modelVersion, accuracyMetrics, dateDeployed } = req.body
+    const existModel = await AiModel.findOne({ modelID })
+    if (existModel) {
+        throw new ApiError(401, "Model Allready exist")
+    }
+    const newModel = await AiModel.create({ modelID, trainingDataInformation, trainingDataType, modelVersion, accuracyMetrics, dateDeployed })
+
+    if (!newModel) {
+        throw new ApiError("Error while Storing Model");
+    }
+    newModel.save()
+
+    return res.status(200).json(new ApiResponce(200, "Ai Model Added succefully", newModel))
 })
 
 const addProduct = asyncHandler(async (req, res) => {
-    console.log(req.body)
-})
+    const { productId, productName, productDescription, price, stockQuantity, category, quantityInStock, supplierInformation } = req.body;
+
+    if (!productId && !productName && !productDescription && !price && !stockQuantity) {
+        throw new ApiError(401, "All fields are required");
+    }
+
+    const productLocalPath = req.files?.ProductPhoto[0]?.path;
+    if (!productLocalPath) {
+        throw new ApiError(401, "Product photo is required");
+    }
+
+    const productPhotoUrl = await uploadOnCloud(productLocalPath);
+    if (!productPhotoUrl) {
+        throw new ApiError(401, "Error while Uploading Photo");
+    }
+
+    const newProduct = await Product.create({
+        productId,
+        ProductPhoto: productPhotoUrl.url,
+        productName,
+        productDescription,
+        price,
+        stockQuantity,
+        category,
+        quantityInStock,
+        supplierInformation,
+    });
+
+    return res.status(200).json(new ApiResponce(200, "Product added successfully", newProduct));
+});
 
 const addBlogs = asyncHandler(async (req, res) => {
-    console.log(addBlogs)
+    const { title, content, date } = req.body
+    console.log(title, content, date)
+
+    if (!title && !content && !date) {
+        throw new ApiError(401, "All fields are required")
+    }
+
+    const thumbnailLocalPath = req.files?.thumbnail[0]?.path
+    if (!thumbnailLocalPath) {
+        throw new ApiError(401, "Thumbnail is Required")
+    } 
+    const thumbnailUrl = await uploadOnCloud(thumbnailLocalPath)
+    const newBlog = await Blog.create({ thumbnail: thumbnailUrl.url, title, content, date })
+    console.log("newBlog", newBlog)
+    return res.status(200).json(new ApiResponce(200, "New Blog is Published", newBlog))
 })
 
 const sendNotification = asyncHandler(async (req, res) => {
